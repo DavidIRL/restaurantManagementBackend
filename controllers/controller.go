@@ -2,16 +2,19 @@ package controller
 
 import (
 	"context"
+    "fmt"
 	"github.com/gin-gonic/gin"
-    "go.mongodb.org/mongo-driver/bson/primitives"
     "primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-    "github.com/mongodb/mongo-go-driver"
+    "log"
+    "math"
+	"go.mongodb.org/mongo-driver"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitives"
 	"goRestaurantManager/database"
 	"goRestaurantManager/models"
-	"gopkg.in/bluesuncorp/validator.v5"
-	"gopkg.in/mgo.v2/bson"
+	"github.com/go-playground/validator/v10"
 	"net/http"
+    "strconv"
 	"time"
 )
 func inTimeSpan(start, end, check time.Time) bool {
@@ -69,9 +72,9 @@ func GetFoods() gin.HandlerFunc {
 	return func(c *gin.Context) {
         var contxt, cancel = context.WithTimeout(context.Background(), 40*time.Second)
 
-        recPerPage, err := strconv.Atoi(c.Query("recordPerPage"))
-        if err != nil || recPerPage < 1 {
-            recPerPage = 12
+        recordPerPage, err := strconv.Atoi(c.Query("recordPerPage"))
+        if err != nil || recordPerPage < 1 {
+            recordPerPage = 12
         }
 
         page, err := strconv.Atoi(c.Query("page"))
@@ -83,18 +86,23 @@ func GetFoods() gin.HandlerFunc {
         startIndex, err = strconv.Atoi(c.Query("startIndex"))
 
         matchBy := bson.D{{"$match", bson.D{{}}}}
-        groupBy := bson.D{{"$group", bson.D{
-            {"_id", bson.D{{"_id", "null"}}},
-            {"total_count", bson.D{{"$sum, 1"}}},{"data", bson.D{{"$push", "$$ROOT"}}} }}}
+        groupBy := bson.D{
+            {"$group", bson.D{
+                {"_id", bson.D{{"_id", "null"}}},
+                {"total_count", bson.D{{"$sum", 1}}},
+                {"data", bson.D{{"$push", "$$ROOT"}}},
+                }   
+            }
+        }
+        
         projectBy := bson.D{
-            {
-                "$project", bson.D{
-                    {"_id", 0},
+            {"$project", bson.D{
+                {"_id", 0},
                     {"total_count", 1},
                     {"food_items", bson.D{
-                        {"$slice", []interface{}{"$data", startIndex, recPerPage}}}},
-                },
-            },
+                        {"$slice", []interface{}{"$data", startIndex, recordPerPage}}}},
+                }
+            }
         }
 
         result, err := foodCollection.Aggregate(contxt, mongo.Pipeline{
@@ -849,7 +857,80 @@ func GetOrderItemsByOrder() gin.HandlerFunc {
 }
 
 func ItemByOrder(id string) (OrderItems []primitive.M, err error) {
-	
+    var contxt, cancel = context.WithTimeout(context.Background(), 40*time.Second)
+
+    matchBy := bson.D{{"$match": bson.D{{"order_id", id}}}}
+    lookupBy := bson.D{{"$lookup", bson.D{{"from", "food"},
+            {"localField", "food_id"}, {"foreignField", "food_id"}, {"as", "food"}}}}
+    unwind := bson.D{{"$unwind", bson.D{{"path", "$food"}, {"preserveNullAndEmptyArrays", true} }}}
+
+    lookupOrder := bson.D{{"$lookup", bson.D{{"from", "order"},
+            {"localField", "order_id"}, {"foreignField", "order_id"}, {"as", "order"}}}}
+    unwindOrder := bson.D{{"$unwind", bson.D{{"path", "$order"},{"preserveNullAndEmptyArrays", true} }}}
+    
+    lookupTable := bson.D{{"$lookup", bson.D{{"from", "table"},
+            {"localField", "order.table_id"}, {"foreignField", "table_id"}, {"as", "table"}}}}
+    unwindTable := bson.D{{"$unwind", bson.D{{"path", "$table"}, {"preserveNullAndEmptyArrays", true} }}}
+
+    tableProject := bson.D{
+            {"$project", bson.D{
+                {"id", 0},
+                {"amount", "$food.price"},
+                {"total_count", 1},
+                {"food_name", "$food.name"},
+                {"food_image", "food.food_image"},
+                {"table_number", "$table.table_number"},
+                {"table_id", "$table.table_id"},
+                {"order_id", "$order.order_id"},
+                {"price", "$food.price"},
+                {"quantity", 1},
+                }
+            }
+    }
+    
+    groupBy := bson.D{{"$group", bson.D{{"_id", bson.D{
+            {"order_id", "$order_id"}, {"table_id", "$table_id"},
+            {"table_number", "$table_number"}}},
+            {"amount_due", bson.D{{"$sum", "$amount"}}},
+            {"total_count", bson.D{{"$sum", 1}}},
+            {"order_items", bson.D{{"$push", 1}}},
+            }}}
+
+    groupProject := bson.D{
+        {"$project", bson.D{
+            {"id", 0},
+            {"amount_due", 1},
+            {"total_count", 1},
+            {"table_number", "$_id.table_number"},
+            {"order_items", 1},
+            }
+        }
+    }
+    
+    result, err := orderItemCollection.Aggregate(contxt, mongo.Pipeline{
+        matchBy,
+        lookupBy,
+        unwind,
+        lookupOrder,
+        unwindOrder,
+        lookupTable,
+        unwindTable,
+        tableProject,
+        groupBy,
+        groupProject,
+    })
+    if err != nil {
+        panic(err)
+    }
+    
+    if err = result.All(contxt, &OrderItems); err != nil {
+        panic(err)
+    }
+
+    defer cancel()
+
+    return OrderItems, err
+
 }
 
 func CreateOrderItem() gin.HandlerFunc {
