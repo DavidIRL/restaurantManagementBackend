@@ -9,9 +9,9 @@ import (
     "math"
 	"go.mongodb.org/mongo-driver"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitives"
-	"goRestaurantManager/database"
-	"goRestaurantManager/models"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	database "goRestaurantManager/database"
+	models "goRestaurantManager/models"
 	"github.com/go-playground/validator/v10"
 	"net/http"
     "strconv"
@@ -44,8 +44,50 @@ func VerifyPassword(expectedPass string, providedPass string) (bool, string) {
 
 func GetUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
+        var contxt, cancel = context.WithTimeout(context.Background(), 40*time.Second)
 
-	}
+        recordPerPage, err := strconv.Atoi(c.Query("recordPerPage"))
+        if err != nil || recordPerPage < 1 {
+            recordPerPage = 12
+        }
+
+        page, err := strconv.Atoi(c.Query("page"))
+        if err != nil {
+            page = 1
+        }
+
+        startIndex := (page-1) * recordPerPage
+        startIndex, err = strconv.Atoi(c.Query("startIndex"))
+
+        matchBy := bson.D{{"$match", bson.D{{}}}}
+        projectBy := bson.D{
+            {"$project", bson.D{
+                {"_id", 0},
+                {"total_count", 1},
+            {"user_items", bson.D{
+                {"$slice", []interface{}{"$data", startIndex, recordPerPage}},
+                }
+            }
+                }
+            }
+        }
+
+        result, err := userCollection.Aggregate(contxt, mongo.Pipeline{
+            matchBy,
+            projectBy,
+        })
+        defer cancel()
+        if err != nil {
+            msg := fmt.Sprintf("Listing all users was unsuccessful")
+            c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+        }
+
+        var allUsers []bson.M
+        if err = result.All(contxt, &allUsers); err != nil {
+            log.Fatal(err)
+        }
+        c.JSON(http.StatusOK, allUsers[0])
+    }
 }
 
 func GetUser() gin.HandlerFunc {
