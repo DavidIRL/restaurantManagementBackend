@@ -339,8 +339,6 @@ func CreateMenu() gin.HandlerFunc {
         defer cancel()
         c.JSON(http.StatusOK, result)
         defer cancel()
-
-
 	}
 }
 
@@ -407,25 +405,129 @@ func UpdateMenu() gin.HandlerFunc {
 
 func GetOrders() gin.HandlerFunc {
 	return func(c *gin.Context) {
+        var contxt, cancel = context.WithTimeout(context.Background(), 40*time.Second)
+        
+        result, err := orderCollection.Find(context.TODO(), bson.M{})
+        defer cancel()
+        if err != nil {
+            msg := fmt.Sprintf("Listing of orders was unsuccessful")
+            c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+        }
+        var allOrders []bson.M
+        if err = result.All(contxt, &allOrders); err != nil {
+            log.Fatal(err)
+        }
+        c.JSON(http.StatusOK, allOrders)
 
 	}
 }
 
 func GetOrder() gin.HandlerFunc {
 	return func(c *gin.Context) {
+        var contxt, cancel = context.WithTimeout(context.Background(), 40*time.Second)
+        orderId := c.Param("order_id")
 
+        err := orderCollection.FindOne(contxt, bson.M{"order_id": orderId}).Decode(&order)
+        defer cancel()
+        if err != nil {
+            msg := fmt.Sprintf("Fetching order details was unsuccessful")
+            c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+        }
+        c.JSON(http.StatusOK, order)
 	}
 }
 
 func CreateOrder() gin.HandlerFunc {
 	return func(c *gin.Context) {
+        var table models.Table
+        var order models.Order
 
+        if err := c.BindJSON(&order); err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+            return
+        }
+
+        validationErr := validate.Struct(order)
+        if validationErr != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
+        }
+
+        if order.Table_id != nil {
+            err := tableCollection.FindOne(contxt, bson.M{"table_id": order.Table_id}).Decode(&table)
+            defer cancel()
+            if err != nil {
+                msg := fmt.Sprintf("Table was not found")
+                c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+                return
+            }
+        }
+
+        order.Created_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+        order.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+
+        order.ID = primitive.NewObjectID()
+        order.Order_id = order.ID.Hex()
+
+        result, err := orderCollection.InsertOne(contxt, order)
+
+        if err != nil {
+            msg := fmt.Sprintf("Order creation was unsuccessful")
+            c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+            return
+        }
+
+        defer cancel()
+        c.JSON(http.StatusOK, result)
 	}
 }
 
 func UpdateOrder() gin.HandlerFunc {
 	return func(c *gin.Context) {
+        var table models.Table
+        var order models.Order
 
+        var updateObj primitive.D
+
+        orderId := c.Param("order_id")
+        if err := c.BindJSON(&order); err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+            return
+        }
+
+        if order.Table_id != nil {
+            err := menuCollection.FindOne(contxt, bson.M{"table_id": food.Table_id}).Decode(&table)
+            defer cancel()
+            if err != nil {
+                msg := fmt.Sprintf("Menu was not found")
+                c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+            }
+
+            order.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+            updateObj = append(updateObj, bson.E{"updated_at", food.Updated_at})
+
+            upsert := true
+            filter := bson.M{"order_id": orderId}
+            opt := options.UpdateOptions{
+                Upsert: &upsert,
+            }
+
+            result, err := orderCollection.UpdateOne(
+                contxt,
+                filter,
+                bson.D{
+                    {"$set", updateObj},
+                },
+                &opt,
+            )
+
+            if err != nil {
+                msg := fmt.Sprintf("Order update was unsuccessful")
+                c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+                return
+            }
+
+            defer cancel()
+            c.JSON(http.StatusOK, result)
 	}
 }
 
@@ -456,6 +558,9 @@ func UpdateTable() gin.HandlerFunc {
 }
 
 //------------------------------- OrderItem-based functions -------------------------------\\
+
+func orderItemCreator()
+
 
 func GetOrderItems() gin.HandlerFunc {
 	return func(c *gin.Context) {
