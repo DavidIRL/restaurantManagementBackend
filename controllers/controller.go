@@ -253,25 +253,137 @@ func UpdateFood() gin.HandlerFunc {
 
 func GetInvoices() gin.HandlerFunc {
 	return func(c *gin.Context) {
+        var contxt, cancel = context.WithTimeout(context.Background(), 40*time.Second)
+        
+        result, err := invoiceCollection.Find(context.TODO(), bson.M{})
+        defer cancel()
+        if err != nil {
+            msg := fmt.Sprintf("Listing of invoices was unsuccessful")
+            c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+        }
 
+        var allInvoices []bson.M
+        if err = result.All(contxt, &allInvoices); err != nil {
+            log.Fatal(err)
+        }
+        c.JSON(http.StatusOK, allInvoices)
 	}
 }
 
 func GetInvoice() gin.HandlerFunc {
 	return func(c *gin.Context) {
+        var contxt, cancel = context.WithTimeout(context.Background(), 40*time.Second)
+        invoiceId := c.Param("invoice_id")
 
+        var invoice models.Invoice
+
+        err := invoiceCollection.FindOne(contxt, bson.M{"invoice_id": invoiceId}).Decode(&invoice)
+        defer cancel()
+        if err != nil {
+            msg := fmt.Sprintf("Listing of invoice details was unsuccessful")
+            c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+        }
+
+        var invoiceView InvoiceViewFormat
+
+        allOrderItems, err := ItemByOrder(invoice.Order_id)
+        invoiceView.Order_id = invoice.Order_id
+        invoiceView.Payment_due_date = invoice.Payment_due_date
+
+        invoiceView.Payment_method = "null"
+        if invoice.Payment_method != nil {
+            invoiceView.Payment_method = *invoice.Payment_method
+        }
+        
+        invoiceView.Invoice_id = invoice.Invoice_id
+        invoiceView.Payment_status = *&invoice.Payment_status
+        invoiceView.Amount_due = allOrderItems[0]["amount_due"]
+        invoiceView.Table_number = allOrderItems[0]["table_number"]
+        invoiceView.Order_details = allOrderItems[0]["order_items"]
+
+        c.JSON(http.StatusOK, invoiceView)
 	}
 }
 
 func CreateInvoice() gin.HandlerFunc {
 	return func(c *gin.Context) {
+        var contxt, cancel = context.WithTimeout(context.Background(), 40*time.Second)
+        var invoice models.Invoice
+        
+        if err := c.BindJSON(&invoice); err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+            return
+        }
 
+        var order models.Order
+
+        err := orderCollection.FindOne(contxt, bson.M{"order_id": invoice.Order_id}).Decode(&order)
+        defer cancel()
+        if err != nil {
+            msg := fmt.Sprintf("Order was not found")
+            c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+            return
+        }
+
+        if invoice.Payment_status == nil {
+            invoice.Payment_status = "PENDING"
+        }
 	}
 }
 
 func UpdateInvoice() gin.HandlerFunc {
 	return func(c *gin.Context) {
+        var contxt, cancel = context.WithTimeout(context.Background(), 40*time.Second)
+        invoice_id := c.Param("invoice_id")
 
+        var invoice models.Invoice
+        
+        if err := c.BindJSON(&invoice); err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+            return
+        }
+
+        var updateObj primitive.D
+
+        if invoice.Payment_method != nil {
+            updateObj = append(updateObj, bson.E{"payment_method", invoice.Payment_method})
+            
+        }
+
+        if invoice.Payment_status != nil {
+            updateObj = append(updateObj, bson.E{"payment_status", invoice.Payment_status})
+
+        }
+
+        invoice.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+        updateObj = append(updateObj, bson.E{"updated_at", invoice.Updated_at})
+
+        upsert := true
+        filter := bson.M{"invoice_id": invoice_id}
+        opt := options.UpdateOptions{
+            Upsert: &upsert,
+        }
+
+        if invoice.Payment_status == nil {
+            invoice.Payment_status = "PENDING"
+        }
+        
+        result, err := invoiceCollection.UpdateOne(
+            contxt,
+            filter,
+            bson.D{
+                {"$set", updateObj},
+            },
+            &opt,
+        )
+        if err != nil {
+            msg := fmt.Sprintf("Invoice update was unsuccessful")
+            c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+            return
+        }
+
+        defer cancel()
+        c.JSON(http.StatusOK, result)
 	}
 }
 
