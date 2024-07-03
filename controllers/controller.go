@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	database "goRestaurantManager/database"
 	models "goRestaurantManager/models"
+    helper "goRestaurantManager/helpers"
 	"github.com/go-playground/validator/v10"
 	"net/http"
     "strconv"
@@ -35,16 +36,28 @@ var orderItemCollection *mongo.Collection = database.OpenCollection(database.Cli
 //------------------------------- User-based functions -------------------------------\\
 
 func HashPassword(password string) string {
-
+    bytes, err := bcrypt.GeneratFromPassword([]byte(password), 14)
+    if err != nil {
+        log.Panic(err)
+    }
+    return string(bytes)
 }
 
 func VerifyPassword(expectedPass string, providedPass string) (bool, string) {
-
+    err := bcrypt.CompareHashAndPassword([]byte(providedPass), []byte(expectedPass))
+    check := true
+    msg := ""
+    if err != nil {
+        msg = fmt.Sprintf("login and/or password are incorrect")
+        check = false
+    }
+    return check, msg
 }
 
 func GetUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
         var contxt, cancel = context.WithTimeout(context.Background(), 40*time.Second)
+        var user models.User
 
         recordPerPage, err := strconv.Atoi(c.Query("recordPerPage"))
         if err != nil || recordPerPage < 1 {
@@ -92,19 +105,117 @@ func GetUsers() gin.HandlerFunc {
 
 func GetUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
+        var contxt, cancel = context.WithTimeout(context.Background(), 40*time.Second)
+        userId := c.Param("user_id")
 
+        var user models.User
+        err := userCollection.FindOne(contxt, bson.M{"user_id": userId}).Decode(&user)
+
+        defer cancel()
+        if err != nil {
+            msg := fmt.Sprintf("Fetching user was unsuccessful")
+            c.JSON(http.StatusInternalServerError, git.H{"error": msg})
+        }
+        c.JSON(http.StatusOK, user)
 	}
 }
 
 func SignUp() gin.HandlerFunc {
-	return func(c *gin.Context) {
+	return func(c *gin.Context) {  
+        var contxt, cancel = context.WithTimeout(context.Background(), 40*time.Second)
+        var user models.User
         
+        if err := c.BindJSON(&user); err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+            return
+        }
+
+        validationErr := validate.Struct(user)
+        if validationErr != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
+            return
+        }
+        pwd := HashPassword(*user.Password)
+        user.Password = &pwd
+
+        count, err := userCollection.CountDocuments(contxt, bson.M{"phone": user.Phone})
+        defer cancel()
+        if err != nil {
+            log.Panic(err)
+            msg := fmt.Sprintf("Finding phone number was unsuccessful")
+            c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+            return
+        }
+
+        if count > 0 {
+            msg := fmt.Sprintf("Email or phone number already exsists")
+            c.JSON{http.StatusInternalServerError, gin.H{"error":}}
+            return
+        }
+
+		user.Created_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+		user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+        user.ID = primitive.NewObjectID()
+        user.User_id = user.ID.Hex()
+
+        token, refreshToken, _ := helper.GenerateAllTokens(
+            *user.Email,
+            *user.First_Name,
+            *user.Last_Name,
+            *user.User_id,
+            )
+        user.Token = &token
+        user.Refresh_Token = &refreshToken
+
+        result, err := userCollection.InsertOne(contxt, user)
+        if err != nil {
+            msg := fmt.Sprintf("User creation was unsuccessful")
+            c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+            return
+        }
+        defer cancel()
+        c.JSON(http.StatusOK, result)
+
+
+
+
 	}
 }
 
 func Login() gin.HandlerFunc {
 	return func(c *gin.Context) {
+        var contxt, cancel = context.WithTimeout(context.Background(), 40*time.Second)
+        var user models.User
+        var foundUser models.User
 
+        if err := c.BindJSON(&user); err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+            return
+        }
+        
+        err := userCollection.FindOne(contxt, bson.M{"email": user.Email}).Decode(&foundUser)
+        defer cancel()
+        if err != nil {
+            msg := fmt.Sprintf("User not found. Login incorrect")
+            c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+            return
+        }
+        
+        isValidPwd, msg = VerifyPassword(*user.Password, *foundUser.Password)
+        defer cancel()
+        if isValidPwd != true {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+        }
+
+        token, refreshToken, _ := helper.GenerateAllTokens(
+            *foundUser.Email,
+            *foundUser.First_Name,
+            *foundUser.Last_Name,
+            *foundUser.User_id
+            )
+
+        helper.UpdateAllTokens(token, refreshToken, foundUser.User_id)
+        c.JSON(http.StatusOK, foundUser)
 	}
 }
 
