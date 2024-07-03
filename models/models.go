@@ -20,6 +20,14 @@ type User struct {
 	User_id       string             `json:"user_id"`
 }
 
+type SignInDetails struct {
+    Email       string
+    First_name  string
+    Last_name   string
+    Uid         string
+    jwt.StandardClaims
+}
+
 type Food struct {
 	ID         primitive.ObjectID `bson:"_id"`
 	Name       *string            `json:"name" validate:"required,min=2,max=100"`
