@@ -1,7 +1,7 @@
 package models
 
 import (
-	"go.mongodb.org/mongo-drive/bson/primitive"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
 )
 
@@ -21,11 +21,11 @@ type User struct {
 }
 
 type SignInDetails struct {
-    Email       string
-    First_name  string
-    Last_name   string
-    Uid         string
-    jwt.StandardClaims
+	Email      string
+	First_name string
+	Last_name  string
+	Uid        string
+	jwt.StandardClaims
 }
 
 type Food struct {
@@ -51,14 +51,14 @@ type Invoice struct {
 }
 
 type InvoiceViewFormat struct {
-    Invoice_id          string
-    Payment_method      string
-    Order_id            string
-    Payment_status      *string
-    Amount_due          interface{}
-    Table_number        interface{}
-    Payment_due_date    time.Time
-    Order_details       interface{}
+	Invoice_id       string
+	Payment_method   string
+	Order_id         string
+	Payment_status   *string
+	Amount_due       interface{}
+	Table_number     interface{}
+	Payment_due_date time.Time
+	Order_details    interface{}
 }
 
 type Menu struct {
@@ -102,8 +102,8 @@ type OrderItem struct {
 }
 
 type OrderItemPack struct {
-    Table_id    *string
-    Order_items []models.OrderItem
+	Table_id    *string
+	Order_items []models.OrderItem
 }
 
 type Note struct {

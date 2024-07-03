@@ -12,14 +12,12 @@ func UserRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.POST("/users/:user_id", controller.UpdateUser())
 }
 
-
 func FoodRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.GET("/foods", controller.GetFoods())
 	incomingRoutes.GET("/foods/:food_id", controller.GetFood())
 	incomingRoutes.POST("/foods", controller.CreateFood())
 	incomingRoutes.POST("/foods/:food_id", controller.UpdateFood())
 }
-
 
 func InvoiceRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.GET("/invoices", controller.GetInvoices())
@@ -28,14 +26,12 @@ func InvoiceRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.POST("/invoices/:invoice_id", controller.UpdateInvoice())
 }
 
-
 func MenuRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.GET("/menu", controller.GetMenus())
 	incomingRoutes.GET("/menu/:menu_id", controller.GetMenu())
 	incomingRoutes.POST("/menu", controller.CreateMenu())
 	incomingRoutes.POST("/menu/:menu_id", controller.UpdateMenu())
 }
-
 
 func OrderRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.GET("/orders", controller.GetOrders())
@@ -44,7 +40,6 @@ func OrderRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.POST("/orders/:order_id", controller.UpdateOrder())
 }
 
-
 func TableRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.GET("/tables", controller.GetTables())
 	incomingRoutes.GET("/tables/:table_id", controller.GetTable())
@@ -52,11 +47,10 @@ func TableRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.POST("/tables/:table_id", controller.UpdateTable())
 }
 
-
 func OrderItemRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.GET("/orderItems", controller.GetOrderItems())
 	incomingRoutes.GET("/orderItems/:orderItem_id", controller.GetOrderItem())
-    incomingRoutes.GET("/orderItems-order/:order_id", controller.ItemsByOrder())
+	incomingRoutes.GET("/orderItems-order/:order_id", controller.ItemsByOrder())
 	incomingRoutes.POST("/orderItems", controller.CreateOrderItem())
 	incomingRoutes.POST("/orderItems/:orderItem_id", controller.UpdateOrderItem())
 }
