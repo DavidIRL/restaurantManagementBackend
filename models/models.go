@@ -6,18 +6,18 @@ import (
 )
 
 type User struct {
-    ID              primitive.ObjectID      `bson:"_id"`
-    First_Name      *string                 `json:"first_name" validate:"required,min=2,max=100"`
-    Last_Name       *string                 `json:"last_name" validate:"required,min=2,max=100"`
-    Password        *string                 `json:"Password" validate:"required,min=14"`
-    Email           *string                 `json:"email", validate:"email,required"`
-    Avatar          *string                 `json:"avatar"`
-    Phone           *string                 `json:"phone" validate:"required"`
-    Token           *string                 `json:"token"`
-    Refresh_Token   *string                 `json:"refresh_token"`
-    Created_at      time.Time               `json:"created_at"`
-    Updated_at      time.Time               `json:"updated_at"`
-    User_id         string                  `json:"user_id"`
+	ID            primitive.ObjectID `bson:"_id"`
+	First_Name    *string            `json:"first_name" validate:"required,min=2,max=100"`
+	Last_Name     *string            `json:"last_name" validate:"required,min=2,max=100"`
+	Password      *string            `json:"Password" validate:"required,min=14"`
+	Email         *string            `json:"email", validate:"email,required"`
+	Avatar        *string            `json:"avatar"`
+	Phone         *string            `json:"phone" validate:"required"`
+	Token         *string            `json:"token"`
+	Refresh_Token *string            `json:"refresh_token"`
+	Created_at    time.Time          `json:"created_at"`
+	Updated_at    time.Time          `json:"updated_at"`
+	User_id       string             `json:"user_id"`
 }
 
 type Food struct {
@@ -82,12 +82,11 @@ type OrderItem struct {
 	Order_id      *string            `json:"order_id" validate:"required"`
 }
 
-
 type Note struct {
-    ID          primitive.ObjectID  `bson:"_id"`
-    Text        string              `json:"text"`
-    Title       string              `json:"title"`
-    Created_at  time.Time           `json:"created_at"`
-    Updated_at  time.Time           `json:"updated_at"`
-    Note_id     string              `json:"note_id"`
+	ID         primitive.ObjectID `bson:"_id"`
+	Text       string             `json:"text"`
+	Title      string             `json:"title"`
+	Created_at time.Time          `json:"created_at"`
+	Updated_at time.Time          `json:"updated_at"`
+	Note_id    string             `json:"note_id"`
 }
