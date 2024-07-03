@@ -3,10 +3,11 @@ package database
 import (
 	"context"
 	"fmt"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"time"
+
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func DBinstance() *mongo.Client {
@@ -14,14 +15,17 @@ func DBinstance() *mongo.Client {
 	MongoDB := fmt.Sprintf("mongodb://localhost:%d", port)
 	fmt.Print(MongoDB)
 
+	contxt, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+
 	client, err := mongo.NewClient(options.Client().ApplyURI(MongoDB))
 	if err != nil {
 		log.Fatal(err)
 	}
-	contxt, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 
 	defer cancel()
+
 	err = client.Connect(contxt)
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -31,7 +35,7 @@ func DBinstance() *mongo.Client {
 var Client *mongo.Client = DBinstance()
 
 func OpenCollection(client *mongo.Client, collectionName string) *mongo.Collection {
-	var collection *mongo.Client = client.Database("restaurant").Collection(collectionName)
+	var collection *mongo.Collection = client.Database("restaurant").Collection(collectionName)
 
 	return collection
 }

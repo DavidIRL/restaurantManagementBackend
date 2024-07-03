@@ -1,8 +1,10 @@
 package models
 
 import (
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type User struct {
@@ -10,7 +12,7 @@ type User struct {
 	First_Name    *string            `json:"first_name" validate:"required,min=2,max=100"`
 	Last_Name     *string            `json:"last_name" validate:"required,min=2,max=100"`
 	Password      *string            `json:"Password" validate:"required,min=14"`
-	Email         *string            `json:"email", validate:"email,required"`
+	Email         *string            `json:"email" validate:"email,required"`
 	Avatar        *string            `json:"avatar"`
 	Phone         *string            `json:"phone" validate:"required"`
 	Token         *string            `json:"token"`
@@ -74,7 +76,7 @@ type Menu struct {
 
 type Order struct {
 	ID         primitive.ObjectID `bson:"_id"`
-	Order_Date time.Time          `json:"order_id" validate:"required"`
+	Order_Date time.Time          `json:"order_date" validate:"required"`
 	Created_at time.Time          `json:"created_at"`
 	Updated_at time.Time          `json:"updated_at"`
 	Order_id   string             `json:"order_id"`
@@ -87,23 +89,23 @@ type Table struct {
 	Table_number     *int               `json:"table_number" validate:"required"`
 	Created_at       time.Time          `json:"created_at"`
 	Updated_at       time.Time          `json:"updated_at"`
-	Table_id         string             `json:"table_id`
+	Table_id         string             `json:"table_id"`
 }
 
 type OrderItem struct {
 	ID            primitive.ObjectID `bson:"_id"`
-	Size          *string            `json:"size": validate:"required,eq=S|eq=M|eq=L"`
+	Size          *string            `json:"size" validate:"required,eq=S|eq=M|eq=L"`
 	Unit_Price    *float64           `json:"unit_price" validate:"required"`
 	Created_at    time.Time          `json:"created_at"`
 	Updated_at    time.Time          `json:"updated_at"`
-	Food_id       string             `json:"food_id" validate:"required"`
+	Food_id       *string            `json:"food_id" validate:"required"`
 	Order_item_id string             `json:"order_item_id"`
 	Order_id      *string            `json:"order_id" validate:"required"`
 }
 
 type OrderItemPack struct {
 	Table_id    *string
-	Order_items []models.OrderItem
+	Order_items []OrderItem
 }
 
 type Note struct {

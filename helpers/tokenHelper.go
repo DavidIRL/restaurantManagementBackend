@@ -3,54 +3,56 @@ package helper
 import (
 	"context"
 	"fmt"
-	jwt "github.com/dgrijalva/jwt-go"
-	database "goRestaurantManager/database"
 	"log"
 	"os"
+	database "restaurantmanager/gobackend/database"
+	models "restaurantmanager/gobackend/models"
 	"time"
+
+	jwt "github.com/dgrijalva/jwt-go"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var userCollection *mongo.Collection = database.OpenCollection(database.Client, "user")
 var SECRET_KEY string = os.Getenv("SECRET_KEY")
 
 func GenerateAllTokens(email, firstName, lastName, uid string) (signedToken, signedRefreshToken string, err error) {
-	claims := &SignedDetails{
+	claims := models.SignInDetails{
 		Email:      email,
 		First_name: firstName,
-		Last_name:  lastname,
+		Last_name:  lastName,
 		Uid:        uid,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(24)).Unix(),
 		},
 	}
 
-	refreshClaims := &SignedClaims{
+	refreshClaims := models.SignInDetails{
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(168)).Unix(),
 		},
 	}
 
-	token, terr := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(SECRET_KEY))
-	refreshToken, rterr := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(SECRET_KEY))
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(SECRET_KEY))
+	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(SECRET_KEY))
 
-	if terr != nil {
-		log.Panic(terr)
-		return
-	}
-	if rterr != nil {
-		log.Panic(rterr)
+	if err != nil {
+		log.Panic(err)
 		return
 	}
 
-	return token, refreshToken, error
+	return token, refreshToken, err
 }
 
 func UpdateAllTokens(signedToken, signedRefreshToken, userId string) {
 	var contxt, cancel = context.WithTimeout(context.Background(), 40*time.Second)
 	var updateObj primitive.D
 
-	updateObj = append(updateObj, bson.E{"token", singedToken})
-	updateObj = append(updateObj, bson.E{"refresh_token", singedRefreshToken})
+	updateObj = append(updateObj, bson.E{"token", signedToken})
+	updateObj = append(updateObj, bson.E{"refresh_token", signedRefreshToken})
 
 	Updated_at, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 	updateObj = append(updateObj, bson.E{"updated_at", Updated_at})
@@ -78,16 +80,16 @@ func UpdateAllTokens(signedToken, signedRefreshToken, userId string) {
 	return
 }
 
-func ValidateToken(signedToken string) (claims *SignedDetails, msg string) {
-	jwt.ParseWithClaims(
-		singedToken,
-		&SignedDetails{},
+func ValidateToken(signedToken string) (claims models.SignInDetails, msg string) {
+	token, err := jwt.ParseWithClaims(
+		signedToken,
+		models.SignInDetails{},
 		func(token *jwt.Token) (interface{}, error) {
 			return []byte(SECRET_KEY), nil
 		},
 	)
 
-	claims, ok := token.Claims.(*SignedDetails)
+	claims, ok := token.Claims.(models.SignInDetails)
 	if !ok {
 		msg = fmt.Sprintf("Token is invalid")
 		msg = err.Error()

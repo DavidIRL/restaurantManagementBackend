@@ -1,12 +1,13 @@
 package main
 
 import (
+	"os"
+	database "restaurantmanager/gobackend/database"
+	middleware "restaurantmanager/gobackend/middleware"
+	routes "restaurantmanager/gobackend/routes"
+
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
-	"goRestaurantManagement/database"
-	middleware "goRestaurantManagement/middleware"
-	routes "goRestaurantManagement/routes"
-	"os"
 )
 
 var foodCollection *mongo.Collection = database.OpenCollection(database.Client, "food")

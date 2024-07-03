@@ -1,15 +1,16 @@
 package routes
 
 import (
+	controller "restaurantmanager/gobackend/controllers"
+
 	"github.com/gin-gonic/gin"
-	controller "goRestaurantManager/controllers"
 )
 
 func UserRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.GET("/users", controller.GetUsers())
 	incomingRoutes.GET("/users/:user_id", controller.GetUser())
-	incomingRoutes.POST("/users", controller.CreateUser())
-	incomingRoutes.POST("/users/:user_id", controller.UpdateUser())
+	incomingRoutes.POST("/users", controller.SignUp())
+	incomingRoutes.POST("/users/:user_id", controller.Login())
 }
 
 func FoodRoutes(incomingRoutes *gin.Engine) {
@@ -50,7 +51,7 @@ func TableRoutes(incomingRoutes *gin.Engine) {
 func OrderItemRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.GET("/orderItems", controller.GetOrderItems())
 	incomingRoutes.GET("/orderItems/:orderItem_id", controller.GetOrderItem())
-	incomingRoutes.GET("/orderItems-order/:order_id", controller.ItemsByOrder())
+	incomingRoutes.GET("/orderItems-order/:order_id", controller.GetOrderItemsByOrder())
 	incomingRoutes.POST("/orderItems", controller.CreateOrderItem())
 	incomingRoutes.POST("/orderItems/:orderItem_id", controller.UpdateOrderItem())
 }
