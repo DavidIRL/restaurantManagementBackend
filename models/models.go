@@ -93,6 +93,11 @@ type OrderItem struct {
 	Order_id      *string            `json:"order_id" validate:"required"`
 }
 
+type OrderItemPack struct {
+    Table_id    *string
+    Order_items []models.OrderItem
+}
+
 type Note struct {
 	ID         primitive.ObjectID `bson:"_id"`
 	Text       string             `json:"text"`

@@ -3,8 +3,10 @@ package controller
 import (
 	"context"
 	"github.com/gin-gonic/gin"
-    "go.mongodb.org/mongo-driver/bson/primitive"
+    "go.mongodb.org/mongo-driver/bson/primitives"
+    "primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+    "github.com/mongodb/mongo-go-driver"
 	"goRestaurantManager/database"
 	"goRestaurantManager/models"
 	"gopkg.in/bluesuncorp/validator.v5"
@@ -12,7 +14,7 @@ import (
 	"net/http"
 	"time"
 )
-var inTimeSpan(start, end, check time.Time) bool {
+func inTimeSpan(start, end, check time.Time) bool {
     return start.After(time.Now()) && end.After(start)
 }
 
@@ -51,7 +53,7 @@ func GetUser() gin.HandlerFunc {
 
 func SignUp() gin.HandlerFunc {
 	return func(c *gin.Context) {
-
+        
 	}
 }
 
@@ -90,13 +92,13 @@ func GetFoods() gin.HandlerFunc {
                     {"_id", 0},
                     {"total_count", 1},
                     {"food_items", bson.D{
-                        {"$slice", []interface{}{"$data", startIndex, recPerPage}}}}
-                }
-            }
+                        {"$slice", []interface{}{"$data", startIndex, recPerPage}}}},
+                },
+            },
         }
 
         result, err := foodCollection.Aggregate(contxt, mongo.Pipeline{
-            matchBy, groupBy, projectBy
+            matchBy, groupBy, projectBy,
         })
         defer cancel()
         if err != nil {
@@ -170,7 +172,7 @@ func round(num float64) int {
     return int(num + math.Copysign(0.5, num))
 }
 
-fun toFixed(num float64, precision int) float64 {
+func toFixed(num float64, precision int) float64 {
     output := math.Pow(10, float64(precision))
     return float64(round(num*output)) / output
 }
@@ -217,8 +219,10 @@ func UpdateFood() gin.HandlerFunc {
             var num = toFixed(*food.Price, 2)
             food.Price = &num
 
-            result, insertErr != nil {
+            if err != nil {
                 msg := fmt.Sprintf("Food item creation was unsuccessful")
+                c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+                return
             }
 
         }
@@ -328,6 +332,28 @@ func CreateInvoice() gin.HandlerFunc {
         if invoice.Payment_status == nil {
             invoice.Payment_status = "PENDING"
         }
+
+        invoice.Created_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+        invoice.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+        invoice.Payment_due_date, _ = time.Parse(time.RFC3339, time.Now().AddDate(0, 0, 1).Format(time.RFC3339))
+        invoice.ID = primitive.NewObjectID()
+        invoice.Invoice_id = invoice.ID.Hex()
+
+        validationErr := validate.Struct(invoice)
+        if validationErr != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
+            return
+        }
+
+        result, err := invoiceCollection.InsertOne(contxt, invoice)
+        if err != nil {
+            msg := fmt.Sprintf("Invoice creation was unsuccessful")
+            c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+            return
+        }
+
+        defer cancel()
+        c.JSON(http.StatusOK, result)
 	}
 }
 
@@ -676,18 +702,59 @@ func orderItemCreator()
 
 func GetOrderItems() gin.HandlerFunc {
 	return func(c *gin.Context) {
+        var contxt, cancel = context.WithTimeout(context.Background(), 40*time.Second)
 
+        result, err := orderItemCollection.Find(context.TODO(), bson.M{})
+
+        defer cancel()
+        if err != nil {
+                msg := fmt.Sprintf("Listing of order items was unsuccessful")
+                c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+                return
+        }
+        var allOrderItems []bson.M
+        if err = result.All(contxt, &allOrderItems); err != nil {
+                log.Fatal(err)
+                return
+        }
+        c.JSON(http.StatusOK, allOrderItems)
 	}
 }
 
 func GetOrderItem() gin.HandlerFunc {
 	return func(c *gin.Context) {
+        var contxt, cancel = context.WithTimeout(context.Background(), 40*time.Second)
 
+        orderItemId := c.Param("order_item_id")
+        var orderItem models.OrderItem
+
+        err := orderItemCollection.FindOne(contxt, bson.M{"orderItem_id": orderItemId}).Decode(&orderItem)
+        defer cancel()
+        if err != nil {
+            msg := fmt.Sprintf("Listing ordered items was unsuccessful")
+            c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+            return
+        }
+        c.JSON(http.StatusOK, result)
 	}
 }
 
+func GetOrderItemsByOrder() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        orderId := c.Param("order_id")
+
+        allOrderItems, err := ItemByOrder(orderId)
+        if err != nil {
+            msg := fmt. Sprintf("Listing of order items by order was unsuccessful")
+            c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+            return
+        }
+        c.JSON(http.StatusOK, result)
+    }
+}
+
 func ItemByOrder(id string) (OrderItems []primitive.M, err error) {
-	return
+	
 }
 
 func CreateOrderItem() gin.HandlerFunc {
