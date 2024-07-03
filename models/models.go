@@ -42,6 +42,17 @@ type Invoice struct {
 	Updated_at       time.Time          `json:"ordered_at"`
 }
 
+type InvoiceViewFormat struct {
+    Invoice_id          string
+    Payment_method      string
+    Order_id            string
+    Payment_status      *string
+    Amount_due          interface{}
+    Table_number        interface{}
+    Payment_due_date    time.Time
+    Order_details       interface{}
+}
+
 type Menu struct {
 	ID         primitive.ObjectID `bson:"_id"`
 	Name       string             `json:"name" validate:"required"`
