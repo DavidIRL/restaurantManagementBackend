@@ -1,4 +1,4 @@
-module restaurantmanager/gobackend
+module github.com/DavidIRL/restaurantManagementBackend
 
 go 1.22.5
 

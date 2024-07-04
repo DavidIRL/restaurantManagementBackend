@@ -30,7 +30,7 @@ func DBinstance() *mongo.Client {
 		log.Fatal(err)
 	}
 	fmt.Sprintf("connected to mongodb on %d\n", port)
-    return client
+	return client
 }
 
 var Client *mongo.Client = DBinstance()

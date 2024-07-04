@@ -1,10 +1,10 @@
 package main
 
 import (
+	database "github.com/DavidIRL/restaurantManagementBackend/database"
+	middleware "github.com/DavidIRL/restaurantManagementBackend/middleware"
+	routes "github.com/DavidIRL/restaurantManagementBackend/routes"
 	"os"
-	database "restaurantmanager/gobackend/database"
-	middleware "restaurantmanager/gobackend/middleware"
-	routes "restaurantmanager/gobackend/routes"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"

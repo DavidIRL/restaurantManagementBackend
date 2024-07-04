@@ -3,10 +3,10 @@ package helper
 import (
 	"context"
 	"fmt"
+	database "github.com/DavidIRL/restaurantManagementBackend/database"
+	models "github.com/DavidIRL/restaurantManagementBackend/models"
 	"log"
 	"os"
-	database "restaurantmanager/gobackend/database"
-	models "restaurantmanager/gobackend/models"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"

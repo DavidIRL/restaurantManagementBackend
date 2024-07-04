@@ -3,12 +3,12 @@ package controller
 import (
 	"context"
 	"fmt"
+	database "github.com/DavidIRL/restaurantManagementBackend/database"
+	helper "github.com/DavidIRL/restaurantManagementBackend/helpers"
+	models "github.com/DavidIRL/restaurantManagementBackend/models"
 	"log"
 	"math"
 	"net/http"
-	database "restaurantmanager/gobackend/database"
-	helper "restaurantmanager/gobackend/helpers"
-	models "restaurantmanager/gobackend/models"
 	"strconv"
 	"time"
 

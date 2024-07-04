@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"fmt"
+	helper "github.com/DavidIRL/restaurantManagementBackend/helpers"
 	"net/http"
-	helper "restaurantmanager/gobackend/helpers"
 
 	"github.com/gin-gonic/gin"
 )
